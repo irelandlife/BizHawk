@@ -208,7 +208,7 @@ struct NPortInfo
 					} States[16];
 					uint32_t NumStates;
 				} Status;
-				uint8_t _Padding[400];
+				uint8_t _Padding2[400];
 			};
 		} Inputs[256];
 	} Devices[32];

@@ -15,6 +15,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		}
 
 		private LibNymaCore _nyma;
+		private ControllerAdapter _controllerAdapter;
+		private readonly byte[] _inputPortData = new byte[16 * 16];
 
 		protected T DoInit<T>(GameInfo game, byte[] rom, string filename)
 			where T : LibNymaCore
@@ -23,10 +25,10 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			{
 				// TODO cfg and stuff
 				Filename = filename,
-				SbrkHeapSizeKB = 1024 * 1024 * 16,
-				SealedHeapSizeKB = 1024 * 1024 * 16,
-				InvisibleHeapSizeKB = 1024 * 1024 * 16,
-				PlainHeapSizeKB = 1024 * 1024 * 16,
+				SbrkHeapSizeKB = 1024 * 16,
+				SealedHeapSizeKB = 1024 * 16,
+				InvisibleHeapSizeKB = 1024 * 16,
+				PlainHeapSizeKB = 1024 * 16,
 				StartAddress = WaterboxHost.CanonicalStart,
 				SkipCoreConsistencyCheck = CoreComm.CorePreferences.HasFlag(CoreComm.CorePreferencesFlags.WaterboxCoreConsistencyCheck),
 				SkipMemoryConsistencyCheck = CoreComm.CorePreferences.HasFlag(CoreComm.CorePreferencesFlags.WaterboxMemoryConsistencyCheck),
@@ -73,12 +75,34 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				VsyncNumerator = info.FpsFixed;
 				VsyncDenominator = 1 << 24;
 
+				_controllerAdapter = new ControllerAdapter(_nyma.GetInputDevices().Infos, new string[0]);
+				_nyma.SetInputDevices(_controllerAdapter.Devices);
+
 				PostInit();
 			}
 
 			return t;
 		}
 
+		// todo: bleh
+		private GCHandle _frameAdvanceInputLock;
+
+		protected override LibWaterboxCore.FrameInfo FrameAdvancePrep(IController controller, bool render, bool rendersound)
+		{
+			_controllerAdapter.SetBits(controller, _inputPortData);
+			_frameAdvanceInputLock = GCHandle.Alloc(_inputPortData, GCHandleType.Pinned);
+			var ret = new LibNymaCore.FrameInfo
+			{
+				SkipRendering = render ? 0 : 1,
+				Command = LibNymaCore.CommandType.NONE,
+				InputPortData = (byte*)_frameAdvanceInputLock.AddrOfPinnedObject()
+			};
+			return ret;
+		}
+		protected override void FrameAdvancePost()
+		{
+			_frameAdvanceInputLock.Free();
+		}
 
 		private static T ControllerData<T>(byte[] data)
 		{
@@ -92,6 +116,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 
 		protected class ControllerAdapter
 		{
+			public string[] Devices { get; }
 			public ControllerDefinition Definition { get; }
 			public ControllerAdapter(LibNymaCore.NPortInfo[] portInfos, string[] devices)
 			{
@@ -100,10 +125,14 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					Name = "TODO"
 				};
 
+				var finalDevices = new List<string>();
+
 				for (int i = 0, devByteStart = 0; i < portInfos.Length && portInfos[i].ShortName != null; i++)
 				{
 					var port = portInfos[i];
 					var devName = i < devices.Length ? devices[i] : port.DefaultDeviceShortName;
+					finalDevices.Add(devName);
+
 					var dev = port.Devices.SingleOrDefault(d => d.ShortName == devName);
 					var category = port.FullName + " - " + dev.FullName;
 
@@ -200,6 +229,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					devByteStart += (int)dev.ByteLength;
 				}
 				Definition = ret;
+				Devices = finalDevices.ToArray();
 			}
 
 			private readonly List<Action<IController, byte[]>> _thunks = new List<Action<IController, byte[]>>();

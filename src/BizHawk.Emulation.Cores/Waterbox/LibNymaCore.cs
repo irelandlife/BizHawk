@@ -63,7 +63,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			/// <summary>
 			/// a single command to run at the start of this frame
 			/// </summary>
-			CommandType Command;
+			public CommandType Command;
 			/// <summary>
 			/// raw data for each input port, assumed to be MAX_PORTS * MAX_PORT_DATA long
 			/// </summary>
@@ -155,14 +155,20 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct NPortInfo
+		public class NPortInfos
+		{
+			[MarshalAs(UnmanagedType.LPArray, SizeConst = 16)]
+			public NPortInfo[] Infos;
+		}
+		[StructLayout(LayoutKind.Sequential)]
+		public class NPortInfo
 		{
 			public string ShortName;
 			public string FullName;
 			public string DefaultDeviceShortName;
 
 			[StructLayout(LayoutKind.Sequential)]
-			public struct NDeviceInfo
+			public class NDeviceInfo
 			{
 				public string ShortName;
 				public string FullName;
@@ -170,7 +176,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				public DeviceFlags Flags;
 				public uint ByteLength;
 				[StructLayout(LayoutKind.Sequential)]
-				public struct NInput
+				public class NInput
 				{
 					public string SettingName;
 					public string Name;
@@ -181,12 +187,12 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					public byte BitSize;
 					public byte _Padding;
 					[StructLayout(LayoutKind.Sequential)]
-					public struct Button
+					public class Button
 					{
 						public string ExcludeName;
 					}
 					[StructLayout(LayoutKind.Sequential)]
-					public struct Axis
+					public class Axis
 					{
 						public string SettingsNameNeg;
 						public string SettingsNamePos;
@@ -194,9 +200,10 @@ namespace BizHawk.Emulation.Cores.Waterbox
 						public string NamePos;
 					}
 					[StructLayout(LayoutKind.Sequential)]
-					public struct Switch
+					public class Switch
 					{
-						public struct Position
+						[StructLayout(LayoutKind.Sequential)]
+						public class Position
 						{
 							public string SettingName;
 							public string Name;
@@ -208,9 +215,9 @@ namespace BizHawk.Emulation.Cores.Waterbox
 						public uint DefaultPosition;
 					}
 					[StructLayout(LayoutKind.Sequential)]
-					public struct Status
+					public class Status
 					{
-						public struct State
+						public class State
 						{
 							public IntPtr ShortName;
 							public IntPtr Name;
@@ -232,8 +239,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		}
 
 		[BizImport(CC, Compatibility = true)]
-		[return: MarshalAs(UnmanagedType.LPArray, SizeConst = 16)]
-		public abstract NPortInfo[] GetInputDevices();
+		public abstract NPortInfos GetInputDevices();
 
 		[BizImport(CC, Compatibility = true)]
 		public abstract void SetInputDevices(string[] devices);
