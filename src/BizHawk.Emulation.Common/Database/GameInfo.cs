@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Globalization;
+using System.Linq;
 
+using BizHawk.API.ApiHawk;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Common
