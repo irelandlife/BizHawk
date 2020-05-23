@@ -18,7 +18,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		private ControllerAdapter _controllerAdapter;
 		private readonly byte[] _inputPortData = new byte[16 * 16];
 
-		protected T DoInit<T>(GameInfo game, byte[] rom, string filename)
+		protected T DoInit<T>(GameInfo game, byte[] rom, string filename, string extension)
 			where T : LibNymaCore
 		{
 			var t = PreInit<T>(new WaterboxOptions
@@ -46,7 +46,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				{
 					// TODO: Set these as some cores need them
 					FileNameBase = "",
-					FileNameExt = "",
+					FileNameExt = extension.Trim('.').ToLowerInvariant(),
 					FileNameFull = fn
 				});
 
