@@ -10,6 +10,7 @@ namespace BizHawk.Emulation.Cores.Consoles.NEC.PCE
 		public TerboGrafix(GameInfo game, byte[] rom, CoreComm comm, string extension)
 			: base(game, rom, comm, new Configuration
 			{
+				SystemId = "PCE" // whatever
 				// TODO: This stuff isn't used so much
 			})
 		{
