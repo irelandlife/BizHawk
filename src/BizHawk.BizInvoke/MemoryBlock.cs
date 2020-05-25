@@ -312,7 +312,7 @@ namespace BizHawk.BizInvoke
 				: base(readable, writable, ptr, length, owner)
 			{
 				_initial = initial;
-				_offset = (int) offset;
+				_offset = (int)offset;
 			}
 
 			/// <summary>the initial data to XOR against for both reading and writing</summary>
@@ -342,13 +342,32 @@ namespace BizHawk.BizInvoke
 			/// <remarks>bounds check already done by calling method i.e. in <see cref="MemoryViewStream.Read">base.Read</see> (for <see cref="Read"/>) or in <see cref="Write"/></remarks>
 			private static unsafe void XorTransform(byte[] source, int sourceOffset, byte[] dest, int destOffset, int length)
 			{
-				// TODO: C compilers can make this pretty snappy, but can the C# jitter? Or do we need intrinsics
+				// TODO: Repalce this inscrutable mess with intrinsics once they land
 				fixed (byte* _s = source, _d = dest)
 				{
 					byte* s = _s + sourceOffset;
 					byte* d = _d + destOffset;
 					byte* sEnd = s + length;
-					while (s < sEnd) *d++ ^= *s++;
+					if (((int)s & 7) == ((int)d & 7))
+					{
+						while (((int)s & 7) != 0 && s < sEnd)
+						{
+							*d++ ^= *s++;
+						}
+						long* sl = (long*)s;
+						long* dl = (long*)d;
+						long* slEnd = (long*)((ulong)sEnd & ~7ul);
+						while (sl < slEnd)
+						{
+							*dl++ ^= *sl++;
+						}
+						s = (byte*)sl;
+						d = (byte*)dl;
+					}
+					while (s < sEnd)
+					{
+						*d++ ^= *s++;
+					}
 				}
 			}
 		}
