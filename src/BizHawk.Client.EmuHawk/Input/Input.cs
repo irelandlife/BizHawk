@@ -194,7 +194,7 @@ namespace BizHawk.Client.EmuHawk
 			public InputFocus Source;
 			public override string ToString()
 			{
-				return $"{EventType.ToString()}:{LogicalButton.ToString()}";
+				return $"{EventType}:{LogicalButton}";
 			}
 		}
 
@@ -313,7 +313,8 @@ namespace BizHawk.Client.EmuHawk
 				return _inputEvents.Count == 0 ? null : _inputEvents.Dequeue();
 			}
 		}
-		void EnqueueEvent(InputEvent ie)
+
+		private void EnqueueEvent(InputEvent ie)
 		{
 			lock (this)
 			{
@@ -321,18 +322,13 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		public List<(string AxisID, float Value)> GetAxisValues()
+		public IDictionary<string, float> GetAxisValues()
 		{
-			var axisValuesCopy = new List<(string, float)>();
 			lock (_axisValues)
 			{
-				foreach (var kvp in _axisValues)
-				{
-					axisValuesCopy.Add((kvp.Key, kvp.Value));
-				}
+				return _axisValues.ToDictionary(d => d.Key, d => d.Value);
 			}
-
-			return axisValuesCopy;
+			
 		}
 
 		private void UpdateThreadProc()

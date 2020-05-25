@@ -1,6 +1,6 @@
 ﻿using System;
 using BizHawk.Emulation.Common;
-using BizHawk.Emulation.Cores.Nintendo.Gameboy;
+using BizHawk.Emulation.Cores;
 
 namespace BizHawk.Client.Common
 {
@@ -8,9 +8,14 @@ namespace BizHawk.Client.Common
 	{
 		private Bk2Controller _adapter;
 
-		public Bk2Movie(string filename = null)
+		internal Bk2Movie(string filename)
 		{
-			Filename = filename ?? string.Empty;
+			if (string.IsNullOrWhiteSpace(filename))
+			{
+				throw new ArgumentNullException($"{nameof(filename)} can not be null.");
+			}
+
+			Filename = filename;
 			Header[HeaderKeys.MovieVersion] = "BizHawk v2.0.0";
 		}
 
@@ -44,19 +49,7 @@ namespace BizHawk.Client.Common
 			return new Bk2LogEntryGenerator(Global.Emulator.SystemId, source);
 		}
 
-		public double FrameCount
-		{
-			get
-			{
-				if (LoopOffset.HasValue)
-				{
-					return double.PositiveInfinity;
-				}
-				
-				return Log.Count;
-			}
-		}
-
+		public int FrameCount => Log.Count;
 		public int InputLogLength => Log.Count;
 
 		public ulong TimeLength
@@ -68,13 +61,14 @@ namespace BizHawk.Client.Common
 					return Convert.ToUInt64(Header[HeaderKeys.VBlankCount]);
 				}
 
-				if (Header.ContainsKey(HeaderKeys.CycleCount))
+				if (Header.ContainsKey(HeaderKeys.CycleCount) && Header[HeaderKeys.Core] == CoreNames.Gambatte)
 				{
-					var gambatteName = ((CoreAttribute)Attribute.GetCustomAttribute(typeof(Gameboy), typeof(CoreAttribute))).CoreName;
-					if (Header[HeaderKeys.Core] == gambatteName)
-					{
-						return Convert.ToUInt64(Header[HeaderKeys.CycleCount]);
-					}
+					return Convert.ToUInt64(Header[HeaderKeys.CycleCount]);
+				}
+
+				if (Header.ContainsKey(HeaderKeys.CycleCount) && Header[HeaderKeys.Core] == CoreNames.SubGbHawk)
+				{
+					return Convert.ToUInt64(Header[HeaderKeys.CycleCount]);
 				}
 
 				return (ulong)Log.Count;
@@ -123,26 +117,7 @@ namespace BizHawk.Client.Common
 			if (frame < FrameCount && frame >= 0)
 			{
 				_adapter ??= new Bk2Controller(Global.MovieSession.MovieController.Definition);
-
-				int getFrame;
-
-				if (LoopOffset.HasValue)
-				{
-					if (frame < Log.Count)
-					{
-						getFrame = frame;
-					}
-					else
-					{
-						getFrame = ((frame - LoopOffset.Value) % (Log.Count - LoopOffset.Value)) + LoopOffset.Value;
-					}
-				}
-				else
-				{
-					getFrame = frame;
-				}
-
-				_adapter.SetFromMnemonic(Log[getFrame]);
+				_adapter.SetFromMnemonic(Log[frame]);
 				return _adapter;
 			}
 

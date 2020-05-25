@@ -46,12 +46,12 @@ namespace BizHawk.Client.Common
 
 		/// <summary>
 		/// Gets the total number of frames that count towards the completion time of the movie
-		/// Possibly (but unlikely different from InputLogLength (could be infinity, or maybe an implementation automatically discounts empty frames at the end of a movie, etc)
 		/// </summary>
-		double FrameCount { get; }
+		int FrameCount { get; }
 
 		/// <summary>
-		/// Gets the actual length of the input log, should only be used by code that iterates or needs a real length
+		/// Gets the actual length of the input log, should only be used by code that needs a the input log length
+		/// specifically, not the frame count
 		/// </summary>
 		int InputLogLength { get; }
 
@@ -228,11 +228,12 @@ namespace BizHawk.Client.Common
 
 	public static class MovieExtensions
 	{
-		public static bool IsActive(this IMovie movie) => movie?.Mode != MovieMode.Inactive;
+		public static bool IsActive(this IMovie movie) => movie != null && movie.Mode != MovieMode.Inactive;
 		public static bool NotActive(this IMovie movie) => movie == null || movie.Mode == MovieMode.Inactive;
-		public static bool IsPlaying(this IMovie movie) => movie?.Mode == MovieMode.Play || movie?.Mode == MovieMode.Finished;
+		public static bool IsPlaying(this IMovie movie) => movie?.Mode == MovieMode.Play;
 		public static bool IsRecording(this IMovie movie) => movie?.Mode == MovieMode.Record;
-		public static bool IsFinished(this IMovie movie) => movie.Mode == MovieMode.Finished;
+		public static bool IsFinished(this IMovie movie) => movie?.Mode == MovieMode.Finished;
+		public static bool IsPlayingOrFinished(this IMovie movie) => movie?.Mode == MovieMode.Play || movie?.Mode == MovieMode.Finished;
 		public static bool IsPlayingOrRecording(this IMovie movie) => movie?.Mode == MovieMode.Play || movie?.Mode == MovieMode.Record;
 
 

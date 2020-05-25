@@ -214,8 +214,8 @@ namespace BizHawk.Client.EmuHawk
 			MainForm.PauseOnFrame = null;
 			MainForm.PauseEmulator();
 
-			// Nag if inaccurate core, but not if auto-loading
-			if (!CanAutoload )
+			// Nag if inaccurate core, but not if auto-loading or movie is already loaded
+			if (!CanAutoload && MovieSession.Movie.NotActive())
 			{
 				// Nag but allow the user to continue anyway, so ignore the return value
 				EmuHawkUtil.EnsureCoreIsAccurate(Emulator);
@@ -623,8 +623,7 @@ namespace BizHawk.Client.EmuHawk
 				return false;
 			}
 
-			var newMovie = MovieService.CreateTas(startsFromSavestate: startsFromSavestate);
-			newMovie.Filename = file.FullName;
+			var newMovie = (ITasMovie)MovieService.Get(file.FullName, startsFromSavestate);
 			newMovie.BindMarkersToInput = Settings.BindMarkersToInput;
 			newMovie.TasStateManager.InvalidateCallback = GreenzoneInvalidated;
 			
@@ -678,9 +677,10 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			var tasMovie = MovieService.CreateTas();
+			var filename = DefaultTasProjName(); // TODO don't do this, take over any mainform actions that can crash without a filename
+			var tasMovie = (ITasMovie)MovieService.Get(filename);
 			tasMovie.BindMarkersToInput = Settings.BindMarkersToInput;
-			tasMovie.Filename = DefaultTasProjName(); // TODO don't do this, take over any mainform actions that can crash without a filename
+			
 
 			tasMovie.TasStateManager.InvalidateCallback = GreenzoneInvalidated;
 			tasMovie.PropertyChanged += TasMovie_OnPropertyChanged;

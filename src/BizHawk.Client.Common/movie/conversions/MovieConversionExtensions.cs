@@ -15,7 +15,7 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 {
 	public static class MovieConversionExtensions
 	{
-		public static ITasMovie ToTasMovie(this IMovie old, bool copy = false)
+		public static ITasMovie ToTasMovie(this IMovie old)
 		{
 			string newFilename = $"{old.Filename}.{TasMovie.Extension}";
 
@@ -37,7 +37,7 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 				}
 			}
 
-			var tas = new TasMovie(newFilename, old.StartsFromSavestate);
+			var tas = (ITasMovie)MovieService.Get(newFilename, old.StartsFromSavestate);
 
 			for (var i = 0; i < old.InputLogLength; i++)
 			{
@@ -45,10 +45,7 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 				tas.AppendFrame(input);
 			}
 
-			if (!copy)
-			{
-				old.Truncate(0); // Trying to minimize ram usage
-			}
+			old.Truncate(0); // Trying to minimize ram usage
 
 			tas.HeaderEntries.Clear();
 			foreach (var kvp in old.HeaderEntries)
@@ -79,7 +76,7 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 
 		public static IMovie ToBk2(this IMovie old)
 		{
-			var bk2 = new Bk2Movie(old.Filename.Replace(old.PreferredExtension, Bk2Movie.Extension));
+			var bk2 = MovieService.Get(old.Filename.Replace(old.PreferredExtension, Bk2Movie.Extension));
 
 			for (var i = 0; i < old.InputLogLength; i++)
 			{
@@ -146,7 +143,8 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 				}
 			}
 
-			var tas = new TasMovie(newFilename, true) { BinarySavestate = savestate };
+			var tas = (ITasMovie)MovieService.Get(newFilename, true);
+			tas.BinarySavestate = savestate;
 			tas.LagLog.Clear();
 
 			var entries = old.GetLogEntries();
@@ -230,7 +228,8 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 				}
 			}
 
-			var tas = new TasMovie(newFilename, true) { SaveRam = saveRam };
+			var tas = (ITasMovie) MovieService.Get(newFilename, false);
+			tas.SaveRam = saveRam;
 			tas.TasStateManager.Clear();
 			tas.LagLog.Clear();
 
@@ -246,7 +245,6 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 			}
 
 			tas.StartsFromSaveRam = true;
-			tas.StartsFromSavestate = false;
 			tas.SyncSettingsJson = old.SyncSettingsJson;
 
 			tas.Comments.Clear();
@@ -331,9 +329,14 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 				movie.HeaderEntries.Add("IsCGBMode", "1");
 			}
 
-			if (emulator is SubGBHawk subgbHawk && subgbHawk._GBCore.IsCGBMode())
+			if (emulator is SubGBHawk subgbHawk)
 			{
-				movie.HeaderEntries.Add("IsCGBMode", "1");
+				if (subgbHawk._GBCore.IsCGBMode())
+				{
+					movie.HeaderEntries.Add("IsCGBMode", "1");
+				}
+
+				movie.HeaderEntries.Add(HeaderKeys.CycleCount, "0");
 			}
 
 			if (emulator is Gameboy gb)
@@ -369,7 +372,7 @@ namespace BizHawk.Client.Common.MovieConversionExtensions
 				movie.HeaderEntries.Add("Is32X", "1");
 			}
 
-			if (emulator is SubNESHawk || emulator is SubGBHawk)
+			if (emulator is SubNESHawk)
 			{
 				movie.HeaderEntries.Add(HeaderKeys.VBlankCount, "0");
 			}

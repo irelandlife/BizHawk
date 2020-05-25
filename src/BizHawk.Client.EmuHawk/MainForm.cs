@@ -943,15 +943,14 @@ namespace BizHawk.Client.EmuHawk
 
 			//also handle floats
 			//we'll need to isolate the mouse coordinates so we can translate them
-			(string AxisID, float Value)? mouseX = null, mouseY = null;
-			var floats = Input.Instance.GetAxisValues();
+			KeyValuePair<string, float>? mouseX = null, mouseY = null;
 			foreach (var f in Input.Instance.GetAxisValues())
 			{
-				if (f.AxisID == "WMouse X")
+				if (f.Key == "WMouse X")
 					mouseX = f;
-				else if (f.AxisID == "WMouse Y")
+				else if (f.Key == "WMouse Y")
 					mouseY = f;
-				else conInput.AcceptNewAxes(f);
+				else conInput.AcceptNewAxis(f.Key, f.Value);
 			}
 
 			//if we found mouse coordinates (and why wouldn't we?) then translate them now
@@ -961,8 +960,8 @@ namespace BizHawk.Client.EmuHawk
 				var p = DisplayManager.UntransformPoint(new Point((int) mouseX.Value.Value, (int) mouseY.Value.Value));
 				float x = p.X / (float)_currentVideoProvider.BufferWidth;
 				float y = p.Y / (float)_currentVideoProvider.BufferHeight;
-				conInput.AcceptNewAxes(("WMouse X", (x * 20000) - 10000));
-				conInput.AcceptNewAxes(("WMouse Y", (y * 20000) - 10000));
+				conInput.AcceptNewAxis("WMouse X", (x * 20000) - 10000);
+				conInput.AcceptNewAxis("WMouse Y", (y * 20000) - 10000);
 			}
 
 		}
@@ -1088,7 +1087,7 @@ namespace BizHawk.Client.EmuHawk
 					}
 				}
 
-				Console.WriteLine($"Selecting display size {lastComputedSize}");
+				Debug.WriteLine($"Selecting display size {lastComputedSize}");
 
 				// Change size
 				Size = new Size(lastComputedSize.Width + borderWidth, lastComputedSize.Height + borderHeight);
@@ -2104,7 +2103,7 @@ namespace BizHawk.Client.EmuHawk
 			AddOnScreenMessage(message);
 		}
 
-		private void Render()
+		internal void Render()
 		{
 			if (Config.DispSpeedupFeatures == 0)
 			{
@@ -2389,26 +2388,22 @@ namespace BizHawk.Client.EmuHawk
 		private void SoftReset()
 		{
 			// is it enough to run this for one frame? maybe..
-			if (Emulator.ControllerDefinition.BoolButtons.Contains("Reset"))
+			if (Emulator.ControllerDefinition.BoolButtons.Contains("Reset")
+				&& !MovieSession.Movie.IsPlaying())
 			{
-				if (MovieSession.Movie.Mode != MovieMode.Play)
-				{
-					InputManager.ClickyVirtualPadController.Click("Reset");
-					AddOnScreenMessage("Reset button pressed.");
-				}
+				InputManager.ClickyVirtualPadController.Click("Reset");
+				AddOnScreenMessage("Reset button pressed.");
 			}
 		}
 
 		private void HardReset()
 		{
 			// is it enough to run this for one frame? maybe..
-			if (Emulator.ControllerDefinition.BoolButtons.Contains("Power"))
+			if (Emulator.ControllerDefinition.BoolButtons.Contains("Power")
+				&& !MovieSession.Movie.IsPlaying())
 			{
-				if (MovieSession.Movie.Mode != MovieMode.Play)
-				{
-					InputManager.ClickyVirtualPadController.Click("Power");
-					AddOnScreenMessage("Power button pressed.");
-				}
+				InputManager.ClickyVirtualPadController.Click("Power");
+				AddOnScreenMessage("Power button pressed.");
 			}
 		}
 
@@ -2684,13 +2679,11 @@ namespace BizHawk.Client.EmuHawk
 		{
 			FDSControlsMenuItem.DropDownItems.Add(name, null, delegate
 			{
-				if (Emulator.ControllerDefinition.BoolButtons.Contains(button))
+				if (Emulator.ControllerDefinition.BoolButtons.Contains(button)
+					&& !MovieSession.Movie.IsPlaying())
 				{
-					if (MovieSession.Movie.Mode != MovieMode.Play)
-					{
-						InputManager.ClickyVirtualPadController.Click(button);
-						AddOnScreenMessage(msg);
-					}
+					InputManager.ClickyVirtualPadController.Click(button);
+					AddOnScreenMessage(msg);
 				}
 			});
 		}
@@ -2781,7 +2774,7 @@ namespace BizHawk.Client.EmuHawk
 			AddOnScreenMessage($"Config file loaded: {iniPath}");
 		}
 
-		private void StepRunLoop_Throttle()
+		internal void StepRunLoop_Throttle()
 		{
 			SyncThrottle();
 			_throttle.signal_frameAdvance = _runloopFrameAdvance;

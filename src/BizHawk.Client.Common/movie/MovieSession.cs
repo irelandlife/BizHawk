@@ -36,8 +36,6 @@ namespace BizHawk.Client.Common
 				?? throw new ArgumentNullException($"{nameof(pauseCallback)} cannot be null.");
 			_modeChangedCallback = modeChangedCallback
 				?? throw new ArgumentNullException($"{nameof(modeChangedCallback)} CannotUnloadAppDomainException be null.");
-
-			Movie = new Bk2Movie();
 		}
 
 		public IMovie Movie { get; private set; }
@@ -104,7 +102,7 @@ namespace BizHawk.Client.Common
 					LatchInputToUser();
 				}
 			}
-			else if (Movie.IsPlaying())
+			else if (Movie.IsPlayingOrFinished())
 			{
 				LatchInputToLog();
 
@@ -151,12 +149,12 @@ namespace BizHawk.Client.Common
 			if (Movie is ITasMovie tasMovie)
 			{
 				tasMovie.GreenzoneCurrentFrame();
-				if (tasMovie.IsPlaying() && _emulator.Frame >= tasMovie.InputLogLength)
+				if (tasMovie.IsPlayingOrFinished() && _emulator.Frame >= tasMovie.InputLogLength)
 				{
 					HandleFrameLoopForRecordMode();
 				}
 			}
-			else if (Movie.Mode == MovieMode.Play && _emulator.Frame >= Movie.InputLogLength)
+			else if (Movie.IsPlaying() && _emulator.Frame >= Movie.InputLogLength)
 			{
 				HandlePlaybackEnd();
 			}
@@ -198,7 +196,7 @@ namespace BizHawk.Client.Common
 				{
 					Movie.SwitchToPlay();
 				}
-				else if (Movie.IsPlaying())
+				else if (Movie.IsPlayingOrFinished())
 				{
 					LatchInputToLog();
 				}
@@ -213,7 +211,7 @@ namespace BizHawk.Client.Common
 				{
 					Movie.StartNewRecording();
 				}
-				else if (Movie.IsPlaying())
+				else if (Movie.IsPlayingOrFinished())
 				{
 					Movie.SwitchToRecord();
 				}
@@ -229,7 +227,7 @@ namespace BizHawk.Client.Common
 			return true;
 		}
 
-		/// <exception cref="MoviePlatformMismatchException"><paramref name="record"/> is <see langword="false"/> and <paramref name="movie"/>.<see cref="IMovie.SystemID"/> does not match <paramref name="emulator"/>.<see cref="IEmulator.SystemId"/></exception>
+		/// <exception cref="MoviePlatformMismatchException"><paramref name="record"/> is <see langword="false"/> and <paramref name="movie"/>.<see cref="IMovie.SystemID"/> does not match <paramref name="systemId"/>.<see cref="IEmulator.SystemId"/></exception>
 		public void QueueNewMovie(IMovie movie, bool record, string systemId)
 		{
 			if (movie.IsActive() && movie.Changes)
@@ -263,8 +261,18 @@ namespace BizHawk.Client.Common
 
 				if (Global.Config.PreferredCores.ContainsKey(preference))
 				{
+					string movieCore = Global.Config.PreferredCores[preference];
+					if (string.IsNullOrWhiteSpace(movie.Core))
+					{
+						PopupMessage($"No core specified in the movie file, using the preferred core {Global.Config.PreferredCores[preference]} instead.");
+					}
+					else
+					{
+						movieCore = movie.Core;
+					}
+
 					_preferredCores[preference] = Global.Config.PreferredCores[preference];
-					Global.Config.PreferredCores[preference] = movie.Core;
+					Global.Config.PreferredCores[preference] = movieCore;
 				}
 			}
 
@@ -336,7 +344,7 @@ namespace BizHawk.Client.Common
 				{
 					message += "recording ";
 				}
-				else if (Movie.IsPlaying())
+				else if (Movie.IsPlayingOrFinished())
 				{
 					message += "playback ";
 				}
@@ -371,7 +379,7 @@ namespace BizHawk.Client.Common
 
 		private void ClearFrame()
 		{
-			if (Movie.IsPlaying())
+			if (Movie.IsPlayingOrFinished())
 			{
 				Movie.ClearFrame(_emulator.Frame);
 				Output($"Scrubbed input at frame {_emulator.Frame}");
@@ -476,7 +484,7 @@ namespace BizHawk.Client.Common
 		private void HandleFrameLoopForRecordMode()
 		{
 			// we don't want TasMovie to latch user input outside its internal recording mode, so limit it to autohold
-			if (Movie is ITasMovie && Movie.IsPlaying())
+			if (Movie is ITasMovie && Movie.IsPlayingOrFinished())
 			{
 				MovieController.SetFromSticky(Global.InputManager.AutofireStickyXorAdapter);
 			}
